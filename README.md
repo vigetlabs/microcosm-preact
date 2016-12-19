@@ -20,5 +20,5 @@ usage, or checkout [`./example`](the example).
 
 - [x] Test suite passes
 - [x] Production build setup
-- [ ] Published to NPM
+- [x] Published to npm
 - [ ] Utilized on a project

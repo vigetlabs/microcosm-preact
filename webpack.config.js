@@ -12,6 +12,12 @@ module.exports = {
     path: path.resolve(__dirname, 'example')
   },
 
+  resolve: {
+    alias: {
+      'microcosm-preact': path.resolve(__dirname, 'src', 'index.js')
+    }
+  },
+
   module: {
     loaders: [{
       test: /\.jsx*/,

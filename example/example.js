@@ -5,7 +5,7 @@
 
 import Microcosm from 'microcosm'
 import { h, render } from 'preact'
-import { Presenter, withIntent } from '../build/index'
+import { Presenter, withIntent } from 'microcosm-preact'
 
 const repo = new Microcosm()
 const toggle = (a, j) => a + ',' + j
@@ -34,7 +34,7 @@ const Pixel = withIntent(function Pixel ({ i, j, active, send }) {
 })
 
 let size = 128
-function MicrocosmCanvas () {
+function Canvas () {
   const items = []
 
   for (let i = 0; i < size; i++) {
@@ -60,4 +60,4 @@ class PixelContainer extends Presenter {
   }
 }
 
-render(<MicrocosmCanvas />, document.getElementById('app'))
+render(<Canvas />, document.getElementById('app'))

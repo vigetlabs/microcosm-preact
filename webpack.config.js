@@ -4,7 +4,8 @@ module.exports = {
   entry: "./example/example.js",
 
   output: {
-    filename : 'example.build.js'
+    filename: 'example.build.js',
+    path: path.resolve(__dirname, 'example')
   },
 
   module: {

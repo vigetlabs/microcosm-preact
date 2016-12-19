@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0
+
+- Minor change to children rendering for default `view`. Preact always provides
+  an array of children.
+
 ## 0.3.0
 
 - Remove contextTypes/propTypes. Preact does not lean on them.

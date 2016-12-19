@@ -3,8 +3,8 @@
 [Microcosm](https://github.com/vigetlabs/microcosm) bindings for
 [Preact](https://github.com/developit/preact). A work in progress!
 
-[![CircleCI](https://img.shields.io/circleci/project/vigetlabs/microcosm-preact.svg?maxAge=2592000)](https://circleci.com/gh/vigetlabs/microcosm-preact)
-[![npm](https://img.shields.io/npm/v/microcosm-preact.svg?maxAge=2592000)](https://www.npmjs.com/package/microcosm-preact)
+![CircleCI branch](https://img.shields.io/circleci/project/github/vigetlabs/microcosm-preact/master.svg?style=flat-square)]
+[![npm](https://img.shields.io/npm/v/microcosm-preact.svg?style=flat-square)](https://www.npmjs.com/package/microcosm-preact)
 
 ## Usage
 

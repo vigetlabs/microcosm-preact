@@ -24,9 +24,11 @@ usage, or checkout [`./example`](the example).
 
 **Build size**: 21.7kb (7.63kb gzipped)
 
-## Check list
+## Roadmap
 
 - [x] Test suite passes
 - [x] Production build setup
 - [x] Published to npm
 - [ ] Utilized on a project
+
+Once we've used `microcosm-preact` on a project, we'll cut a stable release (1.x).

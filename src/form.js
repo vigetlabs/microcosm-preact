@@ -2,12 +2,8 @@ import { h, Component } from 'preact'
 import { Action, merge, inherit } from 'microcosm'
 import serialize from 'form-serialize'
 
-export default function Form () {
+function Form () {
   Component.apply(this, arguments)
-}
-
-Form.contextTypes = {
-  send : true
 }
 
 Form.defaultProps = {
@@ -55,3 +51,5 @@ inherit(Form, Component, {
   }
 
 })
+
+export default Form

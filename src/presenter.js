@@ -107,7 +107,7 @@ inherit(PresenterContext, Component, {
 
     const model = merge(parentProps, this.state)
 
-    if (presenter.view.contextTypes || presenter.view.prototype.setState) {
+    if (presenter.hasOwnProperty('view') || presenter.view.prototype.setState) {
       return h(presenter.view, model)
     }
 
@@ -184,14 +184,5 @@ inherit(PresenterContext, Component, {
     return this.repo.push(intent, ...params)
   }
 })
-
-PresenterContext.propTypes = {
-  repo : true
-}
-
-PresenterContext.contextTypes = PresenterContext.childContextTypes = {
-  repo : true,
-  send : true
-}
 
 export default Presenter

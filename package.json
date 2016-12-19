@@ -12,7 +12,7 @@
   },
   "jest": {
     "setupFiles": [
-      "./test/helper.js"
+      "./test/setup.js"
     ],
     "moduleDirectories": [
       "node_modules",

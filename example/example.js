@@ -2,7 +2,7 @@
  * Taken from pixelpaint
  * https://github.com/dtinth/pixelpaint
  */
- 
+
 import { h, render } from 'preact'
 import Microcosm from 'microcosm'
 import Presenter from '../src/presenter'

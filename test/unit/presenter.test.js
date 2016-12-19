@@ -570,6 +570,12 @@ describe('::render', function () {
     expect(el.textContent).toEqual('Test')
   })
 
+  test('can render empty', function () {
+    let el = render(<Presenter />)
+
+    expect(el.innerHTML).toEqual(undefined)
+  })
+
 })
 
 describe('intents', function() {

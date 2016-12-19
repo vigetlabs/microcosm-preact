@@ -47,7 +47,7 @@ inherit(Presenter, Component, {
   },
 
   view ({ children }) {
-    return children ? children[0] : null
+    return children[0]
   },
 
   render () {

@@ -17,6 +17,15 @@
     "moduleDirectories": [
       "node_modules",
       "."
+    ],
+    "modulePathIgnorePatterns": [
+      "build",
+      "coverage",
+      "example"
+    ],
+    "coveragePathIgnorePatterns": [
+      "test",
+      "example"
     ]
   },
   "devDependencies": {

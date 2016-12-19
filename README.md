@@ -4,7 +4,7 @@ Microcosm bindings for [Preact](https://github.com/developit/preact). A work in 
 
 ## Stats
 
-**Vendor build size**: 21.7kb (7.63kb gzipped)
+**Build size**: 21.7kb (7.63kb gzipped)
 
 ## Check list
 

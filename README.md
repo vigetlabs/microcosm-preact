@@ -1,6 +1,6 @@
 # Microcosm Preact
 
-Microcosm bindings for [Preact](https://github.com/developit/preact). A work in progress!
+[Microcosm](https://github.com/vigetlabs/microcosm) bindings for [Preact](https://github.com/developit/preact). A work in progress!
 
 ## Stats
 

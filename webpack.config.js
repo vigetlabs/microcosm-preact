@@ -1,20 +1,29 @@
+var CommonsPlugin = new require("webpack/lib/optimize/CommonsChunkPlugin")
 var path = require('path')
 
 module.exports = {
-  entry: "./example/example.js",
+  entry: {
+    "bundle": "./example/example.js",
+    "vendor": ["microcosm", "preact"]
+  },
 
   output: {
-    filename: 'example.build.js',
+    filename: '[name].js',
     path: path.resolve(__dirname, 'example')
   },
 
   module: {
     loaders: [{
       test: /\.jsx*/,
-      loader: 'babel',
-      exclude: [/node_modules/]
+      loader: 'babel'
     }]
   },
+
+  plugins: [
+    new CommonsPlugin({
+      name: "vendor"
+    })
+  ],
 
   devServer: {
     port: 3000,

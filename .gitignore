@@ -1,1 +1,2 @@
-example/example.build.js
+example/bundle.js
+example/vendor.js

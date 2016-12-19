@@ -1,4 +1,4 @@
-import preact, { h, Component, render, rerender } from 'preact'
+import { h, Component, render } from 'preact'
 import Microcosm from 'microcosm'
 import Presenter from 'src/presenter'
 import withIntent from 'src/with-intent'

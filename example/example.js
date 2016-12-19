@@ -3,10 +3,9 @@
  * https://github.com/dtinth/pixelpaint
  */
 
-import { h, render } from 'preact'
 import Microcosm from 'microcosm'
-import Presenter from '../src/presenter'
-import withIntent from '../src/with-intent'
+import { h, render } from 'preact'
+import { Presenter, withIntent } from '../build/index'
 
 const repo = new Microcosm()
 const toggle = (a, j) => a + ',' + j

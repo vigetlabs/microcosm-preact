@@ -1,8 +1,9 @@
 {
   "name": "microcosm-preact",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "main": "index.js",
-  "author": "Nathan Hunzaker <nate.hunzaker@gmail.com>",
+  "private": true,
+  "author": "Nathan Hunzaker <nate.hunzaker@viget.com>",
   "license": "MIT",
   "scripts": {
     "test": "jest",
@@ -19,6 +20,7 @@
     ]
   },
   "devDependencies": {
+    "babel-cli": "^6.18.0",
     "babel-core": "^6.21.0",
     "babel-jest": "^18.0.0",
     "babel-loader": "^6.2.10",

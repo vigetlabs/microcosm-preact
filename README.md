@@ -1,6 +1,16 @@
 # Microcosm Preact
 
-[Microcosm](https://github.com/vigetlabs/microcosm) bindings for [Preact](https://github.com/developit/preact). A work in progress!
+[Microcosm](https://github.com/vigetlabs/microcosm) bindings for
+[Preact](https://github.com/developit/preact). A work in progress!
+
+## Usage
+
+```javascript
+import { Presenter, Form, withIntent } from 'microcosm-preact'
+```
+
+Consult [the docs](http://code.viget.com/microcosm/api/presenter.html) for
+usage, or checkout [`./example`](the example).
 
 ## Stats
 
@@ -9,6 +19,6 @@
 ## Check list
 
 - [x] Test suite passes
-- [ ] Production build setup
+- [x] Production build setup
 - [ ] Published to NPM
 - [ ] Utilized on a project

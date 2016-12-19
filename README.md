@@ -10,6 +10,11 @@
 
 ```javascript
 import { Presenter, Form, withIntent } from 'microcosm-preact'
+
+// or
+import Presenter from 'microcosm-preact/presenter'
+import Form from 'microcosm-preact/form'
+import withIntent from 'microcosm-preact/with-intent'
 ```
 
 Consult [the docs](http://code.viget.com/microcosm/api/presenter.html) for

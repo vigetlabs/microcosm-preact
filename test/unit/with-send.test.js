@@ -1,4 +1,5 @@
-import { h, render, Component } from 'preact'
+import { h, Component } from 'preact'
+import { mount } from '../helpers'
 import withSend from '../../src/with-send'
 
 it('exposes the wrapped component as a static property', function() {
@@ -26,7 +27,7 @@ it('extracts send from context', function() {
 
   const send = jest.fn()
 
-  const component = render(<Button send={send} />)
+  const component = mount(<Button send={send} />)
 
   component.click()
 
@@ -44,7 +45,7 @@ it('allows send to be overridden by a prop', function() {
     )
   })
 
-  render(<Button send={send} />).click()
+  mount(<Button send={send} />).click()
 
   expect(send).toHaveBeenCalledWith('action')
 })
@@ -61,7 +62,7 @@ describe('Display name', function() {
   it('sets the correct display name for stateful components', function() {
     const Button = withSend(
       class Button extends Component {
-        render() {
+        mount() {
           return <button type="button" />
         }
       }

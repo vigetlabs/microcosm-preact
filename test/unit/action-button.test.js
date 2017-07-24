@@ -1,4 +1,5 @@
-import { h, render } from 'preact'
+import { h } from 'preact'
+import { mount } from '../helpers'
 import ActionButton from '../../src/action-button'
 import { Action } from 'microcosm'
 
@@ -6,7 +7,7 @@ describe('actions', function() {
   it('passes the value property as parameters into the action', function() {
     let send = jest.fn()
 
-    let button = render(<ActionButton action="test" value={true} send={send} />)
+    let button = mount(<ActionButton action="test" value={true} send={send} />)
 
     button.click()
 
@@ -18,7 +19,7 @@ describe('callbacks', function() {
   it('executes onOpen when that action completes', function() {
     let onOpen = jest.fn()
     let send = () => new Action(n => n).open(true)
-    let button = render(
+    let button = mount(
       <ActionButton action="test" send={send} onOpen={onOpen} />
     )
 
@@ -30,7 +31,7 @@ describe('callbacks', function() {
   it('executes onDone when that action completes', function() {
     let onDone = jest.fn()
     let send = () => new Action(n => n).resolve(true)
-    let button = render(
+    let button = mount(
       <ActionButton action="test" onDone={onDone} send={send} />
     )
 
@@ -42,7 +43,7 @@ describe('callbacks', function() {
   it('executes onError when that action completes', function() {
     let onError = jest.fn()
     let send = () => new Action(n => n).reject(true)
-    let button = render(
+    let button = mount(
       <ActionButton action="test" onError={onError} send={send} />
     )
 
@@ -55,7 +56,7 @@ describe('callbacks', function() {
     let onUpdate = jest.fn()
     let action = new Action(n => n)
     let send = () => action
-    let button = render(
+    let button = mount(
       <ActionButton action="test" onUpdate={onUpdate} send={send} />
     )
 
@@ -69,7 +70,7 @@ describe('callbacks', function() {
   it('does not execute onDone if not given an action', function() {
     let onDone = jest.fn()
     let send = () => true
-    let button = render(
+    let button = mount(
       <ActionButton action="test" onDone={onDone} send={true} />
     )
 
@@ -81,7 +82,7 @@ describe('callbacks', function() {
   it('does not execute onError if not given an action', function() {
     let onError = jest.fn()
     let send = () => true
-    let button = render(<ActionButton action="test" onError={onError} />)
+    let button = mount(<ActionButton action="test" onError={onError} />)
 
     button.click()
 
@@ -91,7 +92,7 @@ describe('callbacks', function() {
   it('does not execute onUpdate if not given an action', function() {
     let onUpdate = jest.fn()
     let send = () => true
-    let button = render(
+    let button = mount(
       <ActionButton action="test" onUpdate={onUpdate} send={send} />
     )
 
@@ -103,7 +104,7 @@ describe('callbacks', function() {
   it('passes along onClick', function() {
     let handler = jest.fn()
     let send = () => {}
-    let button = render(<ActionButton onClick={handler} send={send} />)
+    let button = mount(<ActionButton onClick={handler} send={send} />)
 
     button.click()
 
@@ -116,7 +117,7 @@ describe('manual operation', function() {
     let onDone = jest.fn()
     let send = () => new Action(n => n).resolve(true)
 
-    let button = render(
+    let button = mount(
       <ActionButton action="test" onDone={onDone} send={send} />
     )
 
@@ -127,7 +128,7 @@ describe('manual operation', function() {
 
   it('can pass in send manually', function() {
     const send = jest.fn()
-    const button = render(<ActionButton send={send} />)
+    const button = mount(<ActionButton send={send} />)
 
     button.click()
 
@@ -135,21 +136,21 @@ describe('manual operation', function() {
   })
 })
 
-describe('rendering', function() {
-  it('can render with another tag name', function() {
-    let link = render(<ActionButton tag="a" action="wut" />)
+describe('mounting', function() {
+  it('can mount with another tag name', function() {
+    let link = mount(<ActionButton tag="a" action="wut" />)
 
     expect(link.tagName).toBe('A')
   })
 
   it('uses the button type when set as a button', function() {
-    let button = render(<ActionButton action="wut" />)
+    let button = mount(<ActionButton action="wut" />)
 
     expect(button.type).toBe('button')
   })
 
   it('does not pass the type attribute for non-buttons', function() {
-    let link = render(<ActionButton tag="a" action="wut" />)
+    let link = mount(<ActionButton tag="a" action="wut" />)
 
     expect(link.getAttribute('type')).toBe(null)
   })

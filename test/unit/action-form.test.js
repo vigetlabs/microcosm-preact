@@ -1,4 +1,5 @@
-import { h, render } from 'preact'
+import { h } from 'preact'
+import { mount } from '../helpers'
 import { Action } from 'microcosm'
 import ActionForm from '../../src/action-form'
 
@@ -7,7 +8,7 @@ describe('callbacks', function() {
     const onDone = jest.fn()
     const send = n => new Action(n).resolve(true)
 
-    const form = render(
+    const form = mount(
       <ActionForm action="test" onDone={onDone} send={send} />
     )
 
@@ -20,7 +21,7 @@ describe('callbacks', function() {
     const onError = jest.fn()
     const send = n => new Action(n).reject('bad')
 
-    const form = render(
+    const form = mount(
       <ActionForm action="test" onError={onError} send={send} />
     )
 
@@ -34,7 +35,7 @@ describe('callbacks', function() {
     const action = new Action(n => n)
     const send = n => action
 
-    const form = render(
+    const form = mount(
       <ActionForm action="test" onOpen={onOpen} send={send} />
     )
 
@@ -50,7 +51,7 @@ describe('callbacks', function() {
     const action = new Action(n => n)
     const send = n => action
 
-    const form = render(
+    const form = mount(
       <ActionForm action="test" onUpdate={onUpdate} send={send} />
     )
 
@@ -65,7 +66,7 @@ describe('callbacks', function() {
     const onDone = jest.fn()
     const send = n => true
 
-    const form = render(
+    const form = mount(
       <ActionForm action="test" onDone={onDone} send={send} />
     )
 
@@ -78,7 +79,7 @@ describe('callbacks', function() {
     const onError = jest.fn()
     const send = n => true
 
-    const form = render(
+    const form = mount(
       <ActionForm action="test" onError={onError} send={send} />
     )
 
@@ -91,7 +92,7 @@ describe('callbacks', function() {
     const onUpdate = jest.fn()
     const send = n => true
 
-    const form = render(
+    const form = mount(
       <ActionForm action="test" onUpdate={onUpdate} send={send} />
     )
 
@@ -106,7 +107,7 @@ describe('manual operation', function() {
     const onDone = jest.fn()
     const send = n => new Action(n => n).resolve(true)
 
-    const form = render(
+    const form = mount(
       <ActionForm action="test" onDone={onDone} send={send} />
     )
 
@@ -117,7 +118,7 @@ describe('manual operation', function() {
 
   it('can pass in send manually', function() {
     const send = jest.fn()
-    const form = render(<ActionForm send={send} />)
+    const form = mount(<ActionForm send={send} />)
 
     form.dispatchEvent(new Event('submit'))
 
@@ -134,7 +135,7 @@ describe('prepare', function() {
       return params
     }
 
-    const form = render(
+    const form = mount(
       <ActionForm action="test" prepare={prepare} send={send}>
         <input name="name" defaultValue="Billy" />
       </ActionForm>

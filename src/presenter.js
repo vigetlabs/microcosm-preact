@@ -20,6 +20,12 @@ function passChildren() {
 /* istanbul ignore next */
 const identity = () => {}
 
+function shallowDiffers(a, b) {
+	for (let key in a) if (a[key]!==b[key]) return true;
+	for (let key in b) if (!(key in a)) return true;
+	return false;
+}
+
 class Presenter extends Component {
   constructor(props, context) {
     super()
@@ -33,6 +39,10 @@ class Presenter extends Component {
 
     // Autobind send so that context is maintained when passing send to children
     this.send = this.send.bind(this)
+  }
+
+  shouldComponentUpdate(props, state) {
+    return shallowDiffers(props, this.props) || shallowDiffers(state, this.state);
   }
 
   _beginSetup(mediator) {

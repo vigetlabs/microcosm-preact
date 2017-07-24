@@ -1,10 +1,11 @@
-var CommonsPlugin = new require("webpack/lib/optimize/CommonsChunkPlugin")
 var path = require('path')
 
 module.exports = {
+  devtool: 'inline-sourcemap',
+
   entry: {
-    "bundle": "./example/example.js",
-    "vendor": ["microcosm", "preact"]
+    bundle: './example/example.js',
+    vendor: ['microcosm', 'preact']
   },
 
   output: {
@@ -19,17 +20,13 @@ module.exports = {
   },
 
   module: {
-    loaders: [{
-      test: /\.jsx*/,
-      loader: 'babel'
-    }]
+    loaders: [
+      {
+        test: /\.jsx*/,
+        loader: 'babel'
+      }
+    ]
   },
-
-  plugins: [
-    new CommonsPlugin({
-      name: "vendor"
-    })
-  ],
 
   devServer: {
     port: 3000,

@@ -5,16 +5,16 @@
 
 import Microcosm from 'microcosm'
 import { h, render } from 'preact'
-import { Presenter, withIntent } from 'microcosm-preact'
+import { Presenter, withSend } from 'microcosm-preact'
 
-const repo = new Microcosm()
+const repo = new Microcosm({ batch: true })
 const toggle = (a, j) => a + ',' + j
 
 repo.addDomain('pixels', {
   getInitialState() {
     return {}
   },
-  toggle (state, key) {
+  toggle(state, key) {
     return { ...state, [key]: !state[key] }
   },
   register() {
@@ -24,17 +24,22 @@ repo.addDomain('pixels', {
   }
 })
 
-const Pixel = withIntent(function Pixel ({ i, j, active, send }) {
+const Pixel = withSend(function Pixel({ i, j, active, send }) {
   let style = { top: i * 3, left: j * 3 }
   let onToggle = () => send(toggle, i, j)
 
   return (
-    <div className="pixel" style={style} onMouseOver={onToggle} data-active={active ? '1' : '0'} />
+    <div
+      className="pixel"
+      style={style}
+      onMouseOver={onToggle}
+      data-active={active ? '1' : '0'}
+    />
   )
 })
 
 let size = 128
-function Canvas () {
+function Canvas() {
   const items = []
 
   for (let i = 0; i < size; i++) {
@@ -47,16 +52,16 @@ function Canvas () {
 }
 
 class PixelContainer extends Presenter {
-  view ({ i, j, active }) {
-    return (<Pixel i={i} j={j} onToggle={this.toggle} active={active} />)
-  }
-
-  model ({ i, j }) {
+  getModel({ i, j }) {
     let key = i + ',' + j
 
     return {
-      active : state => state.pixels[key]
+      active: state => state.pixels[key]
     }
+  }
+
+  render({ i, j }, state, { active }) {
+    return <Pixel i={i} j={j} onToggle={this.toggle} active={active} />
   }
 }
 

@@ -1,188 +1,259 @@
-import { Component, h } from 'preact'
-import Microcosm, { merge, tag, inherit } from 'microcosm'
+/**
+ * @fileoverview Presenter is a specialized React component that
+ * creates a boundary between "smart" and "dumb" components. This
+ * improves testing and keeps business logic in a consistent place
+ * (instead of spread across bunches of components).
+ *
+ * Use Presenters to track changes to a Microcosm, push actions, and
+ * manage application flow.
+ * @flow
+ */
 
-const EMPTY = {}
+import { h, Component } from 'preact'
+import Microcosm, { get, merge, tag, getRegistration } from 'microcosm'
+import Model from 'microcosm/addons/model'
 
-function Presenter () {
-  Component.call(this, arguments)
+function passChildren() {
+  return this.props.children[0]
 }
 
-inherit(Presenter, Component, {
-  constructor: Presenter,
+/* istanbul ignore next */
+const identity = () => {}
 
-  _setRepo (repo) {
-    this.repo = repo
+class Presenter extends Component {
+  constructor(props, context) {
+    super()
 
-    this.setup(repo, this.props, this.props.state)
+    if (this.render !== Presenter.prototype.render) {
+      this.defaultRender = this.render
+      this.render = Presenter.prototype.render
+    } else {
+      this.defaultRender = passChildren
+    }
 
-    this.repo.on('teardown', () => this.teardown(repo, this.props, this.state))
-  },
+    // Autobind send so that context is maintained when passing send to children
+    this.send = this.send.bind(this)
+  }
 
-  _connectSend (send) {
-    this.send = send
-  },
+  _beginSetup(mediator) {
+    this.repo = mediator.repo
+    this.mediator = mediator
 
-  setup (repo, props, state) {
+    this.setup(this.repo, this.props, this.state)
+
+    this.model = this.mediator.updateModel(this.props, this.state)
+
+    this.ready(this.repo, this.props, this.state)
+  }
+
+  _beginTeardown() {
+    this.teardown(this.repo, this.props, this.state)
+  }
+
+  _requestRepo(contextRepo) {
+    let givenRepo = this.props.repo || contextRepo
+    let workingRepo = this.getRepo(givenRepo, this.props)
+
+    this.didFork = workingRepo !== givenRepo
+
+    return workingRepo
+  }
+
+  /**
+   * Called when a presenter is created, useful any prep work. `setup`
+   * runs before the first `getModel` invocation.
+   */
+  setup(repo, props, state) {
     // NOOP
-  },
+  }
 
-  update (repo, props, state) {
+  /**
+   * Called after the presenter has run `setup` and executed the first
+   * `getModel`. This hook is useful for fetching initial data and
+   * other start tasks that need access to the model data.
+   */
+  ready(repo, props, state) {
     // NOOP
-  },
+  }
 
-  componentWillUpdate (next, state) {
-    this.update(this.repo, next, state)
-  },
-
-  teardown (repo, props, state) {
+  /**
+   * Called when a presenter gets new props. This is useful for secondary
+   * data fetching and other work that must happen when a Presenter receives
+   * new information.
+   */
+  update(repo, nextProps, nextState) {
     // NOOP
-  },
+  }
 
-  register () {
+  /**
+   * Runs when the presenter unmounts. Useful for tearing down
+   * subscriptions and other setup behavior.
+   */
+  teardown(repo, props, state) {
     // NOOP
-  },
+  }
 
-  model (props, state) {
-    return EMPTY
-  },
+  /**
+   * Catch an action emitted from a child view, using an add-on
+   * `ActionForm`, `ActionButton`, or `withSend`. These add-ons are
+   * designed to improve the ergonomics of presenter/view
+   * communication. Data down, actions up.
+   */
+  intercept() {
+    return {}
+  }
 
-  view ({ children }) {
-    return children.length ? children[0] : null
-  },
+  componentWillUpdate(props, state) {
+    this.model = this.mediator.updateModel(props, state)
+    this.update(this.repo, props, state)
+  }
 
-  render () {
-    // If the view is null, then it is probably incorrectly referenced
-    console.assert(this.view != null,
-                   `${this.constructor.name}::view() is`,
-                   `${typeof this.view}. Is it referenced correctly?`)
+  /**
+   * Runs before assigning a repo to a Presenter. This method is given
+   * the parent repo, either passed in via `props` or `context`. By
+   * default, it returns a fork of that repo, or a new Microcosm if no
+   * repo is provided.
+   *
+   * This provides an opportunity to customize the repo behavior for a
+   * particular Presenter. For example, to circumvent the default
+   * Presenter forking behavior:
+   */
+  getRepo(repo, props) {
+    return repo ? repo.fork() : new Microcosm()
+  }
 
-    return (
-      h(PresenterContext, {
-        parentProps : this.props,
-        parentState : this.state,
-        presenter   : this,
-        view        : this.view,
-        repo        : this.props.repo
-      })
+  /**
+   * Bubble an action up through the presenter tree. If no parent
+   * presenter responds to the action within their `intercept()`
+   * method, then dispatch it to the root Microcosm repo.
+   *
+   * This works exactly like the `send` property passed into a
+   * component that is wrapped in the `withSend` higher order
+   * component.
+   */
+  send(command, ...params) {
+    return this.mediator.send(command, ...params)
+  }
+
+  /**
+   * Builds a view model for the current props and state. This must
+   * return an object of key/value pairs.
+   */
+  getModel(presenterProps, presenterState) {
+    return {}
+  }
+
+  render() {
+    return h(PresenterMediator, {
+      presenter: this,
+      parentState: this.state,
+      parentProps: this.props
+    })
+  }
+}
+
+class PresenterMediator extends Component {
+  constructor(props, context) {
+    super(props, context)
+
+    this.presenter = props.presenter
+
+    this.repo = this.presenter._requestRepo(context.repo)
+    this.send = this.send.bind(this)
+
+    this.state = { repo: this.repo, send: this.send }
+
+    this.model = new Model(this.repo, this.presenter)
+
+    this.model.on('change', this.updateState, this)
+  }
+
+  getChildContext() {
+    return {
+      repo: this.repo,
+      send: this.send
+    }
+  }
+
+  componentWillMount() {
+    this.presenter._beginSetup(this)
+  }
+
+  componentDidMount() {
+    this.presenter.refs = this.refs
+  }
+
+  componentWillUnmount() {
+    this.presenter.refs = this.refs
+
+    if (this.presenter.didFork) {
+      this.repo.shutdown()
+    }
+
+    this.model.teardown()
+
+    this.presenter._beginTeardown()
+  }
+
+  render() {
+    // setObject might have been called before the model
+    // can get assigned
+    this.presenter.model = this.state
+
+    // Views can be getters, so pluck it out so that it is only evaluated once
+    const view = this.presenter.view
+
+    if (view != null) {
+      return h(view, merge(this.presenter.props, this.state))
+    }
+
+    return this.presenter.defaultRender(
+      this.presenter.props,
+      this.presenter.state,
+      this.presenter.model
     )
   }
-})
 
-function PresenterContext (props, context) {
-  Component.call(this, props, context)
+  updateState(state) {
+    this.setState(state)
+  }
 
-  this.repo = this.getRepo()
+  updateModel(props, state) {
+    let bindings = this.presenter.getModel(props, state)
 
-  props.presenter._connectSend(this.send.bind(this))
-}
+    this.model.bind(bindings)
 
-inherit(PresenterContext, Component, {
+    return this.model.value
+  }
 
-  getChildContext () {
-    return {
-      repo : this.repo,
-      send : this.send.bind(this)
-    }
-  },
+  hasParent() {
+    // Do not allow transfer across repos. Check to for inheritence by comparing
+    // the common history object shared between repos
+    return get(this.repo, 'history') === get(this.context, ['repo', 'history'])
+  }
 
-  componentWillMount () {
-    this.props.presenter._setRepo(this.repo)
-    this.recalculate(this.props)
-  },
+  send(intent, ...params) {
+    // tag intent first so the interceptor keys off the right key
+    let taggedIntent = tag(intent)
 
-  componentDidMount () {
-    this.repo.on('change', this.updateState, this)
-  },
+    let interceptors = this.presenter.intercept()
 
-  componentWillUnmount () {
-    this.repo.teardown()
-  },
-
-  componentWillReceiveProps (next) {
-    this.recalculate(next)
-  },
-
-  render () {
-    const { presenter, parentProps } = this.props
-
-    const model = merge(parentProps, this.state)
-
-    if (presenter.hasOwnProperty('view') || presenter.view.prototype.setState) {
-      return h(presenter.view, model)
-    }
-
-    return presenter.view(model)
-  },
-
-  getRepo () {
-    const repo = this.props.repo || this.context.repo
-
-    return repo ? repo.fork() : new Microcosm()
-  },
-
-  updatePropMap ({ presenter, parentProps, parentState }) {
-    this.propMap = presenter.model(parentProps, parentState)
-    this.propMapKeys = Object.keys(this.propMap || EMPTY)
-  },
-
-  recalculate (props) {
-    this.updatePropMap(props)
-    this.updateState()
-  },
-
-  updateState () {
-    let next = this.getState()
-
-    if (next) {
-      this.setState(next)
-    }
-  },
-
-  getState () {
-    let repoState = this.repo.state
-
-    if (typeof this.propMap === 'function') {
-      return this.propMap(repoState)
-    }
-
-    let next = null
-
-    for (var i = this.propMapKeys.length - 1; i >= 0; --i) {
-      var key = this.propMapKeys[i]
-      var entry = this.propMap[key]
-      var value = typeof entry === 'function' ? entry(repoState) : entry
-
-      if (this.state[key] !== value) {
-        next = next || {}
-        next[key] = value
-      }
-    }
-
-    return next
-  },
-
-  send (intent, ...params) {
-    const { presenter } = this.props
-
-    const registry = presenter.register()
-
-    // Tag intents so that they register the same way in the Presenter
-    // and Microcosm instance
-    intent = tag(intent)
+    // A presenter's register goes through the same registration steps
+    let handler = getRegistration(interceptors, taggedIntent, 'resolve')
 
     // Does the presenter register to this intent?
-    if (registry && registry.hasOwnProperty(intent)) {
-      return registry[intent].call(presenter, this.repo, ...params)
+    if (handler) {
+      return handler.call(this.presenter, this.repo, ...params)
     }
 
     // No: try the parent presenter
-    if (this.context.send) {
-      return this.context.send(intent, ...params)
+    if (this.hasParent()) {
+      return this.context.send.apply(null, arguments)
     }
 
     // If we hit the top, push the intent into the Microcosm instance
-    return this.repo.push(intent, ...params)
+    return this.repo.push.apply(this.repo, arguments)
   }
-})
+}
 
 export default Presenter

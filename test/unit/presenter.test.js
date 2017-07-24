@@ -1,550 +1,857 @@
-import { h, Component, render } from 'preact'
+import { h, render, rerender, Component } from 'preact'
 import Microcosm from 'microcosm'
-import Presenter from 'src/presenter'
-import withIntent from 'src/with-intent'
+import Presenter from '../../src/presenter'
+import withSend from '../../src/with-send'
 
-const View = withIntent(function ({ send }) {
-  let onClick = () => send('test', true)
-  return <button id="button" onClick={onClick}>Click</button>
+const View = withSend(function({ send }) {
+  return <button id="button" onClick={() => send('test', true)} />
 })
 
-describe('::model', function() {
+class Repo extends Microcosm {
+  getInitialState() {
+    return { color: 'yellow' }
+  }
+}
 
-  test('model is an alias for model ', function () {
+describe('::getModel', function() {
+  it('passes data to the view ', function() {
     class Hello extends Presenter {
-      model ({ place }) {
+      getModel({ place }) {
         return {
-          greeting: "Hello, " + place + "!"
+          greeting: 'Hello, ' + place + '!'
         }
       }
 
-      view ({ greeting }) {
-        return <p>{ greeting }</p>
+      view({ greeting }) {
+        return (
+          <p>
+            {greeting}
+          </p>
+        )
       }
     }
 
     let el = render(<Hello place="world" />)
 
-    expect(el.textContent).toEqual('Hello, world!')
+    expect(el.innerHTML).toEqual('Hello, world!')
   })
 
-  test('builds the view model into state', function () {
+  it('passes send within the model', function() {
+    let spy = jest.fn()
+
+    class Hello extends Presenter {
+      intercept() {
+        return {
+          test: spy
+        }
+      }
+      view({ send }) {
+        return <button onClick={() => send('test')} />
+      }
+    }
+
+    render(<Hello place="world" />).click()
+
+    expect(spy).toHaveBeenCalled()
+  })
+
+  it('references the forked repo', function() {
+    expect.assertions(1)
+
+    let repo = new Microcosm()
+
+    class Test extends Presenter {
+      view(model) {
+        expect(model.repo.parent).toBe(repo)
+
+        return <p>Test</p>
+      }
+    }
+
+    render(<Test repo={repo} />)
+  })
+
+  it('builds the view model into state', function(done) {
     class MyPresenter extends Presenter {
-      model () {
+      getModel() {
         return {
           color: state => state.color
         }
       }
-      view ({ color }) {
-        return <div>{color}</div>
+      view({ color }) {
+        return (
+          <div>
+            {color}
+          </div>
+        )
       }
     }
 
-    const repo = new Microcosm()
+    const repo = new Repo()
+    const presenter = render(<MyPresenter repo={repo} />)
 
     repo.patch({ color: 'red' })
 
-    const el = render(<MyPresenter repo={repo} />)
-
-    expect(el.textContent).toEqual('red')
+    setTimeout(function() {
+      expect(presenter.innerHTML).toEqual('red')
+      done()
+    }, 100)
   })
 
-  test('handles non-function view model bindings', function () {
+  it('handles non-function view model bindings', function(done) {
     class MyPresenter extends Presenter {
-      model ({ name }) {
+      getModel({ name }) {
         return {
           upper: name.toUpperCase()
         }
       }
-      view ({ upper }) {
-        return <p>{upper}</p>
+      view({ upper }) {
+        return (
+          <p>
+            {upper}
+          </p>
+        )
       }
     }
 
     var presenter = render(<MyPresenter name="phil" />)
 
-    expect(presenter.textContent).toEqual('PHIL')
+    setTimeout(function() {
+      expect(presenter.innerHTML).toEqual('PHIL')
+      done()
+    }, 100)
   })
 
-  test('allows functions to return from model', function () {
-    class MyPresenter extends Presenter {
-      model () {
-        return state => state
-      }
-
-      view ({ color }) {
-        return <p>{color}</p>
-      }
-    }
-
-    const repo = new Microcosm()
-
-    repo.patch({ color: 'red' })
-
-    const el = render(<MyPresenter repo={repo} />)
-
-    expect(el.textContent).toEqual('red')
-  })
-
-  test('does not update state if no key changes', function (done) {
+  it('does not update state if no key changes', function() {
     let spy = jest.fn(() => <p>Test</p>)
 
     class MyPresenter extends Presenter {
-      model () {
+      getModel() {
         return { active: true }
       }
 
       view = spy
     }
 
-    const repo = new Microcosm()
-    const el = render(<MyPresenter repo={repo} />)
+    const repo = new Repo()
 
-    repo.patch({ test: true })
-    repo.patch({ test: false })
+    render(<MyPresenter repo={repo} />)
 
-    setTimeout(function() {
-      expect(spy).toHaveBeenCalledTimes(1)
-      done()
-    }, 0)
+    repo.patch({ color: 'green' })
+    repo.patch({ color: 'turquoise' })
+
+    expect(spy).toHaveBeenCalledTimes(1)
   })
 
-  describe('when updating props', function () {
+  describe('when first building a model', function() {
+    it('passes the repo as the second argument of model callbacks', function() {
+      expect.assertions(1)
 
-    test('recalculates the view model if the props are different', function (done) {
-      let model = jest.fn()
+      let repo = new Repo()
 
-      class Text extends Presenter {
-        model = model
+      class TestCase extends Presenter {
+        getModel(props) {
+          return {
+            name: this.process
+          }
+        }
+
+        process(_state, fork) {
+          expect(fork.parent).toBe(repo)
+        }
       }
 
-      class Wrapper extends Component {
-        state = {
-          active: false
+      render(<TestCase repo={repo} />)
+    })
+
+    it('invokes model callbacks in the scope of the presenter', function() {
+      expect.assertions(1)
+
+      class TestCase extends Presenter {
+        getModel(props) {
+          return {
+            name: this.process
+          }
         }
-        render (_, { active }) {
+
+        process() {
+          expect(this).toBeInstanceOf(TestCase)
+        }
+      }
+
+      render(<TestCase />)
+    })
+  })
+
+  describe('when updating props', function() {
+    it('recalculates the view model if the props are different', function() {
+      const repo = new Microcosm()
+
+      repo.addDomain('name', {
+        getInitialState() {
+          return 'Kurtz'
+        }
+      })
+
+      class Namer extends Presenter {
+        getModel(props) {
+          return {
+            name: state => props.prefix + ' ' + state.name
+          }
+        }
+        view({ name }) {
           return (
-            <button onClick={() => this.setState({ active: true })}>
-              <Text active={active} />
-            </button>
+            <p>
+              {name}
+            </p>
           )
         }
       }
 
-      render(<Wrapper />).click()
+      let el = document.createElement('div')
 
-      setTimeout(function() {
-        expect(model).toHaveBeenCalledTimes(2)
-        done()
-      }, 0)
+      render(<Namer prefix="Colonel" repo={repo} />, el)
+      rerender(<Namer prefix="Captain" repo={repo} />, el)
+
+      setTimeout(function () {
+        expect(el.textContent).toEqual('Captain Kurtz')
+      }, 100)
     })
 
-    test('does not recalculate the view model if the props are the same', function () {
-      let model = jest.fn()
+    it('does not recalculate the view model if the props are the same', function(done) {
+      const repo = new Microcosm()
+      const spy = jest.fn()
 
-      class Text extends Presenter {
-        model = model
+      class Namer extends Presenter {
+        getModel = spy
       }
 
-      class Wrapper extends Component {
-        state = {
-          active: false
-        }
-        render (_, { active }) {
-          return (
-            <button onClick={() => this.setState({ active: true })}>
-              <Text active />
-            </button>
-          )
-        }
-      }
-
-      render(<Wrapper />).click()
+      render(<Namer prefix="Colonel" repo={repo} />)
+      rerender(<Namer prefix="Colonel" repo={repo} />)
 
       setTimeout(function() {
-        expect(model).toHaveBeenCalledTimes(1)
+        expect(spy.mock.calls.length).toEqual(1)
         done()
-      }, 0)
+      }, 100)
+    })
+
+    it('passes the repo as the second argument of model callbacks', function() {
+      expect.assertions(2)
+
+      let repo = new Repo()
+
+      class TestCase extends Presenter {
+        getModel(props) {
+          return {
+            name: this.process
+          }
+        }
+
+        process(_state, fork) {
+          expect(fork.parent).toBe(repo)
+        }
+      }
+
+      render(<TestCase repo={repo} />)
+
+      repo.patch({ color: 'purple' })
+    })
+
+    it('invokes model callbacks in the scope of the presenter', function() {
+      expect.assertions(2)
+
+      let repo = new Repo()
+
+      class TestCase extends Presenter {
+        getModel(props) {
+          return {
+            name: this.process
+          }
+        }
+
+        process() {
+          expect(this).toBeInstanceOf(TestCase)
+        }
+      }
+
+      render(<TestCase repo={repo} />)
+
+      repo.patch({ color: 'purple' })
     })
   })
 
-  describe('when updating state', function () {
+  describe.only('when updating state', function() {
     class Namer extends Presenter {
       state = {
         greeting: 'Hello'
       }
 
-      model (props, state) {
+      getModel(props, state) {
+        console.log('hi', state.greeting)
         return {
           text: state.greeting + ', ' + props.name
         }
       }
 
-      view ({ text }) {
-        let onClick = () => this.setState({ greeting: 'Goodbye'})
-        return <button onClick={onClick}>{text}</button>
+      updateState () {
+        this.setState({ greeting: 'Salutations' })
+      }
+
+      render() {
+        const { text } = this.model
+
+        return (
+          <button onClick={() => this.updateState}>
+            {text}
+          </button>
+        )
       }
     }
 
-    test('calculates the model with state', function () {
-      let el = render(<Namer name="Colonel" />)
+    it('calculates the model with state', function() {
+      const wrapper = render(<Namer name="Colonel" />)
 
-      expect(el.textContent).toEqual('Hello, Colonel')
+      expect(wrapper.textContent).toEqual('Hello, Colonel')
     })
 
-    test('recalculates the model when state changes', function (done) {
-      let el = render(<Namer name="Colonel" />)
+    it('recalculates the model when state changes', function(done) {
+      const wrapper = render(<Namer name="Colonel" />)
 
-      el.click()
+      wrapper.click()
 
-      setTimeout(function() {
-        expect(el.textContent).toEqual('Goodbye, Colonel')
+      setTimeout(function () {
+        expect(wrapper.textContent).toEqual('Salutations, Colonel')
         done()
-      }, 0)
+      }, 100)
     })
 
-    test('does not recalculate the model when state is the same', function () {
-      let model = jest.fn()
+    it('does not recalculate the model when state is the same', function() {
+      const spy = jest.fn(function() {
+        return <p>Test</p>
+      })
 
-      class Test extends Presenter {
-        model = model
+      class TrackedNamer extends Namer {
+        view = spy
+      }
 
-        state = { message: 'Goodbye' }
+      const wrapper = render(<TrackedNamer name="Colonel" />)
 
-        view () {
-          return <button onClick={() => this.setState(this.state)} />
+      wrapper.click()
+
+      expect(spy).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('invoking model callbacks', function() {
+    it('supports any callable value', function() {
+      let callable = {
+        call: jest.fn()
+      }
+
+      class MyPresenter extends Presenter {
+        getModel() {
+          return {
+            test: callable
+          }
         }
       }
 
-      render(<Test name="Colonel" />).click()
+      render(<MyPresenter />)
 
-      expect(model).toHaveBeenCalledTimes(1)
+      expect(callable.call).toHaveBeenCalled()
     })
   })
-
 })
 
 describe('::setup', function() {
-
-  test('runs a setup function when created', function () {
-    let setup = jest.fn()
+  it('runs a setup function when created', function() {
+    const test = jest.fn()
 
     class MyPresenter extends Presenter {
-      setup = setup
+      get setup() {
+        return test
+      }
     }
 
-    render(<MyPresenter />)
+    render(<MyPresenter repo={new Microcosm()} />)
 
-    expect(setup).toHaveBeenCalled()
+    expect(test).toHaveBeenCalled()
   })
 
-  test('domains added in setup show up in the view model', function () {
+  it('domains added in setup show up in the view model', function() {
     class MyPresenter extends Presenter {
-      setup (repo) {
+      setup(repo) {
         repo.addDomain('prop', {
-          getInitialState: () => 'test'
+          getInitialState() {
+            return 'test'
+          }
         })
       }
 
-      model () {
-        return state => state
+      getModel() {
+        return {
+          prop: state => state.prop
+        }
       }
 
-      view ({ prop }) {
-        return <p>{prop}</p>
+      view({ prop }) {
+        return (
+          <p>
+            {prop}
+          </p>
+        )
       }
     }
 
-    let el = render(<MyPresenter />)
+    let prop = render(<MyPresenter />).textContent
 
-    expect(el.textContent).toEqual('test')
+    expect(prop).toEqual('test')
   })
 
-  test('calling setState in setup does not raise a warning', function () {
+  it('calling setState in setup does not raise a warning', function() {
     class MyPresenter extends Presenter {
       setup() {
         this.setState({ foo: 'bar' })
       }
     }
 
-    render(<MyPresenter />)
+    render(<MyPresenter repo={new Microcosm()} />)
   })
 
-  test('setup is called before the initial model', function () {
-    const spy = jest.fn()
+  it('setup is called before the initial model', function() {
+    expect.assertions(1)
 
     class Test extends Presenter {
-      setup () {
-        spy('setup')
+      setup() {
+        expect(this.model).not.toBeDefined()
       }
-
-      model () {
-        spy('model')
-        return {}
+      getModel() {
+        return {
+          test: true
+        }
       }
     }
 
     render(<Test />)
+  })
+})
 
-    let sequence = spy.mock.calls.map(args => args[0])
+describe('::ready', function() {
+  it('runs after setup setup', function() {
+    expect.assertions(1)
 
-    expect(sequence).toEqual(['setup', 'model'])
+    class MyPresenter extends Presenter {
+      setup = jest.fn()
+
+      ready() {
+        expect(this.setup).toHaveBeenCalled()
+      }
+    }
+
+    render(<MyPresenter />)
   })
 
+  it('has the latest model', function() {
+    expect.assertions(1)
+
+    class MyPresenter extends Presenter {
+      setup(repo) {
+        repo.addDomain('prop', {
+          getInitialState() {
+            return 'test'
+          }
+        })
+      }
+
+      ready() {
+        expect(this.model.prop).toEqual('test')
+      }
+
+      getModel() {
+        return {
+          prop: state => state.prop
+        }
+      }
+    }
+
+    render(<MyPresenter />)
+  })
 })
 
 describe('::update', function() {
-
-  test('runs an update function when it gets new props', function (done) {
-    let test = jest.fn()
-
-    class MyPresenter extends Presenter {
-      update (repo, { active }) {
-        test(active)
-      }
-    }
-
-    class Wrapper extends Component {
-      state = { active: false }
-      render () {
-        return (
-          <button onClick={() => this.setState({ active: true })}>
-            <MyPresenter active={this.state.active} />
-          </button>
-        )
-      }
-    }
-
-    render(<Wrapper />).click()
-
-    setTimeout(function() {
-      expect(test).toHaveBeenCalledWith(true)
-      done()
-    }, 0)
-  })
-
-  test('does not run an update function when no props change', function () {
-    let test = jest.fn()
+  it('runs an update function when it gets new props', function() {
+    const test = jest.fn()
 
     class MyPresenter extends Presenter {
-      update (repo, { active }) {
-        test(active)
+      update(repo, props) {
+        test(props.test)
       }
     }
 
-    class Wrapper extends Component {
-      state = { active: false }
-      render () {
-        return (
-          <button onClick={() => this.setState({ active: true })}>
-            <MyPresenter active />
-          </button>
-        )
-      }
-    }
+    let wrapper = render(<MyPresenter test="foo" />)
 
-    render(<Wrapper />).click()
+    wrapper.setProps({ test: 'bar' })
 
-    setTimeout(function() {
-      expect(test).toHaveBeenCalledTimes(1)
-      done()
-    }, 0)
+    expect(test).toHaveBeenCalledTimes(1)
+    expect(test).toHaveBeenCalledWith('bar')
   })
 
-  test('it has access to the old props when update is called', function (done) {
-    let test = jest.fn()
+  it('does not run an update function when no props change', function() {
+    let wrapper = render(<Presenter test="foo" />)
+    let spy = jest.spyOn(wrapper.instance(), 'update')
+
+    wrapper.setProps({ test: 'foo' })
+
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  it('it has access to the old props when update is called', function() {
+    const callback = jest.fn()
+
+    class Test extends Presenter {
+      update(repo, { color }) {
+        callback(this.props.color, color)
+      }
+    }
+
+    render(
+      <Test color="red">
+        <p>Hey</p>
+      </Test>
+    ).setProps({ color: 'blue' })
+
+    expect(callback).toHaveBeenCalledWith('red', 'blue')
+  })
+
+  it('has the latest model when props change', function() {
+    const test = jest.fn()
 
     class MyPresenter extends Presenter {
-      update () {
-        test(this.props.active)
+      getModel(props) {
+        return {
+          next: props.test
+        }
+      }
+      update(repo, props) {
+        test(this.model.next)
       }
     }
 
-    class Wrapper extends Component {
-      state = { active: false }
-      render () {
-        return (
-          <button onClick={() => this.setState({ active: true })}>
-            <MyPresenter active={this.state.active} />
-          </button>
-        )
-      }
-    }
+    let wrapper = render(<MyPresenter test="foo" />)
 
-    render(<Wrapper />).click()
+    wrapper.setProps({ test: 'bar' })
 
-    setTimeout(function() {
-      expect(test).toHaveBeenCalledWith(false)
-      done()
-    }, 0)
+    expect(test).toHaveBeenCalledTimes(1)
+    expect(test).toHaveBeenCalledWith('bar')
   })
-
 })
 
 describe('::teardown', function() {
-
-  test('teardown gets the last props', function (done) {
-    let teardown = jest.fn()
+  it('teardown gets the last props', function() {
+    const spy = jest.fn()
 
     class Test extends Presenter {
-      teardown = teardown
-    }
-
-    class Wrapper extends Component {
-      state = { open: true }
-      render (_, { open }) {
-        return open ? (
-          <button onClick={() => this.setState({ open : false})}>
-            <Test />
-          </button>
-        ) : null
+      get teardown() {
+        return spy
       }
     }
 
-    render(<Wrapper />).click()
+    const wrapper = render(<Test test="foo" />)
 
-    setTimeout(function() {
-      expect(teardown).toHaveBeenCalled()
-      done()
-    }, 0)
+    wrapper.setProps({ test: 'bar' })
+
+    wrapper.unrender()
+
+    expect(spy.mock.calls[0][1].test).toEqual('bar')
   })
 
+  it('eliminates the teardown subscription when overriding getRepo', function() {
+    const spy = jest.fn()
+
+    class Test extends Presenter {
+      teardown = spy
+
+      getRepo(repo) {
+        return repo
+      }
+    }
+
+    const repo = new Microcosm()
+    const wrapper = render(<Test repo={repo} />)
+
+    wrapper.unrender()
+    repo.shutdown()
+
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not teardown a repo that is not a fork', function() {
+    const spy = jest.fn()
+
+    class Test extends Presenter {
+      getRepo(repo) {
+        return repo
+      }
+    }
+
+    const repo = new Microcosm()
+
+    repo.on('teardown', spy)
+
+    mount(<Test repo={repo} />).unmount()
+
+    expect(spy).toHaveBeenCalledTimes(0)
+  })
+
+  it('unsubscribes from an unforked repo', function() {
+    const spy = jest.fn()
+
+    class Test extends Presenter {
+      getModel() {
+        return { test: spy }
+      }
+      getRepo(repo) {
+        return repo
+      }
+    }
+
+    const repo = new Microcosm()
+
+    mount(<Test repo={repo} />).unmount()
+
+    repo.addDomain('test', {
+      getInitialState: () => true
+    })
+
+    // Once: for the initial calculation
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  it('changes during teardown do not cause a recalculation', function() {
+    const spy = jest.fn()
+
+    class Test extends Presenter {
+      getModel() {
+        return { test: spy }
+      }
+      teardown(repo) {
+        repo.addDomain('test', {
+          getInitialState: () => true
+        })
+      }
+      getRepo(repo) {
+        return repo
+      }
+    }
+
+    const repo = new Microcosm()
+
+    mount(<Test repo={repo} />).unmount()
+
+    // Once: for the initial calculation
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('::view', function() {
-
-  test('views can be react components', function () {
-    class MyView extends Component {
+  it('views can be stateful react components', function() {
+    class MyView extends React.Component {
       render() {
-        return <p>{this.props.message}</p>
+        return (
+          <p>
+            {this.props.message}
+          </p>
+        )
       }
     }
 
     class MyPresenter extends Presenter {
       view = MyView
 
-      model() {
+      getModel() {
         return { message: 'hello' }
       }
     }
 
-    let el = render(<MyPresenter />)
+    let text = mount(<MyPresenter />).textContent
 
-    expect(el.textContent).toEqual('hello')
+    expect(text).toEqual('hello')
   })
 
-  test('throws if a view is undefined', function () {
-    class MissingView extends Presenter {
-      view = undefined
+  it('views can be stateless components', function() {
+    function MyView({ message }) {
+      return (
+        <p>
+          {message}
+        </p>
+      )
     }
 
-    expect(() => render(<MissingView />)).toThrow(/MissingView\::view\(\) is undefined\./)
+    class MyPresenter extends Presenter {
+      view = MyView
+
+      getModel() {
+        return { message: 'hello' }
+      }
+    }
+
+    let text = mount(<MyPresenter />).textContent
+
+    expect(text).toEqual('hello')
   })
 
+  it('views can be getters', function() {
+    class MyView extends React.Component {
+      render() {
+        return (
+          <p>
+            {this.props.message}
+          </p>
+        )
+      }
+    }
+
+    class MyPresenter extends Presenter {
+      get view() {
+        return MyView
+      }
+      getModel() {
+        return { message: 'hello' }
+      }
+    }
+
+    let text = mount(<MyPresenter />).textContent
+
+    expect(text).toEqual('hello')
+  })
+
+  it('view getters have access to the model', function() {
+    expect.assertions(1)
+
+    class MyPresenter extends Presenter {
+      get view() {
+        expect(this.model.message).toEqual('hello')
+        return View
+      }
+      getModel() {
+        return { message: 'hello' }
+      }
+    }
+
+    mount(<MyPresenter />)
+  })
 })
 
 describe('purity', function() {
-
-  test('does not cause a re-render when shallowly equal', function (done) {
+  it('does not cause a re-render when shallowly equal', function() {
     const repo = new Microcosm()
-    const view = jest.fn()
+    const renders = jest.fn(() => <p>Test</p>)
 
     repo.patch({ name: 'Kurtz' })
 
     class Namer extends Presenter {
-      model = state => state
-      view  = view
+      getModel() {
+        return { name: state => state.name }
+      }
+
+      get view() {
+        return renders
+      }
     }
 
-    render(<Namer repo={ repo } />)
+    mount(<Namer repo={repo} />)
 
     repo.patch({ name: 'Kurtz', unrelated: true })
 
-    setTimeout(function() {
-      expect(view).toHaveBeenCalledTimes(1)
-      done()
-    }, 0)
+    expect(renders.mock.calls.length).toEqual(1)
   })
-
 })
 
-describe('unmounting', function () {
-
-  test('ignores an repo when it unmounts', function (done) {
+describe('unmounting', function() {
+  it('ignores an repo when it unmounts', function() {
     const spy = jest.fn()
 
     class Test extends Presenter {
-      setup (repo) {
+      setup(repo) {
         repo.teardown = spy
       }
     }
 
-    class Wrapper extends Component {
-      state = { active: true }
-      render (_, { active }) {
-        return (
-          <button onClick={() => this.setState({ active: false })}>
-            {active ? <Test /> : null }
-          </button>
-        )
-      }
-    }
+    mount(<Test />).unmount()
 
-    render(<Wrapper />).click()
-
-    setTimeout(function() {
-      expect(spy).toHaveBeenCalledTimes(1)
-      done()
-    }, 0)
+    expect(spy).toHaveBeenCalled()
   })
 
-  test('does not update the view model when umounted', function (done) {
+  it('does not update the view model when umounted', function() {
     const spy = jest.fn(n => {})
-    let repo = new Microcosm()
 
-    class Test extends Presenter {
-      model = spy
-    }
-
-    class Wrapper extends Component {
-      state = { active: true }
-      render (_, { active }) {
-        return (
-          <button onClick={() => this.setState({ active: false })}>
-            {active ? <Test repo={repo} /> : null }
-          </button>
-        )
+    class MyPresenter extends Presenter {
+      // This should only run once
+      get getModel() {
+        return spy
       }
     }
 
-    render(<Wrapper />).click()
+    let repo = new Microcosm()
+    let wrapper = mount(<MyPresenter repo={repo} />)
+
+    wrapper.unmount()
 
     repo.patch({ foo: 'bar' })
 
-    setTimeout(function() {
-      expect(spy).toHaveBeenCalledTimes(1)
-      done()
-    }, 0)
+    expect(spy.mock.calls.length).toEqual(1)
   })
-
 })
 
-describe('rendering efficiency', function() {
+describe('Efficiency', function() {
+  it('does not subscribe to a change if there is no model', function() {
+    let repo = new Repo()
 
-  test('child view model is not recalculated when parents cause them to re-render', function () {
-    const repo = new Microcosm()
+    jest.spyOn(repo, 'on')
 
-    repo.patch({ name: 'Sally Fields' })
+    class Parent extends Presenter {}
+
+    mount(<Parent repo={repo} />)
+
+    expect(repo.on).not.toHaveBeenCalled()
+  })
+
+  it('does not subscribe to a change if there is no stateful model binding', function() {
+    let repo = new Repo()
+
+    jest.spyOn(repo, 'on')
+
+    class Parent extends Presenter {
+      getModel() {
+        return {
+          foo: 'bar'
+        }
+      }
+    }
+
+    mount(<Parent repo={repo} />)
+
+    expect(repo.on).not.toHaveBeenCalled()
+  })
+
+  it('child view model is not recalculated when parent repos cause them to re-render', function() {
+    const repo = new Repo()
 
     const model = jest.fn(function() {
-      return { name: state => state.name }
+      return {
+        color: state => state.color
+      }
     })
 
     class Child extends Presenter {
-      model = model
+      getModel = model
 
-      view ({ name }) {
-        return <p>{ name }</p>
+      render() {
+        return (
+          <p>
+            {this.model.color}
+          </p>
+        )
       }
     }
 
@@ -552,50 +859,191 @@ describe('rendering efficiency', function() {
       view = Child
     }
 
-    let div = document.createElement('div')
-    let el  = render(<Parent repo={repo} />, div)
+    let wrapper = mount(<Parent repo={repo} />)
 
-    repo.patch({ name: 'Billy Booster' })
+    repo.patch({ color: 'green' })
 
     expect(model).toHaveBeenCalledTimes(1)
+    expect(wrapper.textContent).toEqual('green')
   })
 
+  it('should re-render when state changes', function() {
+    const spy = jest.fn(() => null)
+
+    class Test extends Presenter {
+      view = spy
+    }
+
+    mount(<Test />).setState({ test: true })
+
+    expect(spy).toHaveBeenCalledTimes(2)
+  })
 })
 
-describe('::render', function () {
+describe('::render', function() {
+  it('the default render implementation passes children', function() {
+    let wrapper = mount(
+      <Presenter>
+        <p>Test</p>
+      </Presenter>
+    )
 
-  test('the default render implementation passes children', function () {
-    let el = render(<Presenter><p>Test</p></Presenter>)
-
-    expect(el.textContent).toEqual('Test')
+    expect(wrapper.textContent).toEqual('Test')
   })
 
-  test('can render empty', function () {
-    let el = render(<Presenter />)
+  it('handles overridden an overriden render method', function() {
+    class Test extends Presenter {
+      render() {
+        return <p>Test</p>
+      }
+    }
 
-    expect(el.innerHTML).toEqual(undefined)
+    expect(mount(<Test />).textContent).toEqual('Test')
   })
 
+  it('scope of render should be the presenter', function() {
+    expect.assertions(1)
+
+    class Test extends Presenter {
+      render() {
+        expect(this).toBeInstanceOf(Test)
+
+        return <p>Test</p>
+      }
+    }
+
+    mount(<Test />)
+  })
+
+  it('overridden render passes context', function() {
+    expect.assertions(1)
+
+    function Child(props, context) {
+      expect(context.repo).toBeDefined()
+
+      return <p>Test</p>
+    }
+
+    Child.contextTypes = {
+      repo: () => {}
+    }
+
+    class Test extends Presenter {
+      render() {
+        return <Child />
+      }
+    }
+
+    mount(<Test />)
+  })
+
+  it('allows refs', function() {
+    class MyPresenter extends Presenter {
+      render() {
+        return <p ref="foo">Heyo</p>
+      }
+    }
+
+    mount(<MyPresenter />)
+  })
 })
 
-describe('intents', function() {
+describe('::getRepo', function() {
+  it('can circumvent forking command', function() {
+    class NoFork extends Presenter {
+      getRepo(repo) {
+        return repo
+      }
+    }
 
-  test('receives intent events', function () {
+    let repo = new Microcosm()
+    let wrapper = mount(<NoFork repo={repo} />)
+
+    expect(wrapper.instance().repo).toEqual(repo)
+  })
+})
+
+describe('intercepting actions', function() {
+  it('receives intent events', function() {
     const test = jest.fn()
 
     class MyPresenter extends Presenter {
       view = View
-      register() {
+
+      intercept() {
         return { test }
       }
     }
 
-    let el = render(<MyPresenter />).click()
+    mount(<MyPresenter />).find(View).simulate('click')
 
-    expect(test).toHaveBeenCalled()
+    expect(test.mock.calls[0][1]).toEqual(true)
   })
 
-  test('forwards intents to the repo as actions', function () {
+  it('actions do not bubble to different repo types', function() {
+    class Child extends Presenter {
+      view = View
+    }
+
+    class Parent extends Presenter {
+      render() {
+        return (
+          <div>
+            {this.props.children}
+          </div>
+        )
+      }
+    }
+
+    let top = new Microcosm({ maxHistory: Infinity })
+    let bottom = new Microcosm({ maxHistory: Infinity })
+
+    let wrapper = mount(
+      <Parent repo={top}>
+        <Child repo={bottom} />
+      </Parent>
+    )
+
+    wrapper.find(View).simulate('click')
+
+    expect(top.history.size).toBe(1)
+    expect(bottom.history.size).toBe(2)
+  })
+
+  it('intents do not bubble to different repo types even if not forking', function() {
+    class Child extends Presenter {
+      view = View
+    }
+
+    class Parent extends Presenter {
+      getRepo(repo) {
+        return repo
+      }
+      render() {
+        return (
+          <div>
+            {this.props.children}
+          </div>
+        )
+      }
+    }
+
+    let top = new Microcosm({ maxHistory: Infinity })
+    let bottom = new Microcosm({ maxHistory: Infinity })
+
+    let wrapper = mount(
+      <Parent repo={top}>
+        <Child repo={bottom} />
+      </Parent>
+    )
+
+    wrapper.find(View).simulate('click')
+
+    expect(top.history.size).toBe(1)
+    expect(bottom.history.size).toBe(2)
+  })
+
+  it('forwards intents to the repo as actions', function() {
     class MyPresenter extends Presenter {
       view() {
         return <View />
@@ -604,13 +1052,14 @@ describe('intents', function() {
 
     const repo = new Microcosm({ maxHistory: 1 })
 
-    render(<MyPresenter repo={repo} />).click()
+    mount(<MyPresenter repo={repo} />).find(View).simulate('click')
 
-    expect(repo.history.head.type).toEqual('test')
+    expect(repo.history.head.command.toString()).toEqual('test')
   })
 
-  test('send bubbles up to parent presenters', function () {
+  it('send bubbles up to parent presenters', function() {
     const test = jest.fn()
+    const intercepted = jest.fn()
 
     class Child extends Presenter {
       view() {
@@ -619,46 +1068,108 @@ describe('intents', function() {
     }
 
     class Parent extends Presenter {
-      register() {
-        return { test: (repo, props) => test(props) }
+      intercept() {
+        return { test: (repo, props) => intercepted(props) }
       }
-      view () {
+      view() {
         return <Child />
       }
     }
 
-    render(<Parent repo={ new Microcosm() } />).click()
+    mount(<Parent repo={new Microcosm()} />).find(View).simulate('click')
 
-    expect(test).toHaveBeenCalledWith(true)
+    expect(test).not.toHaveBeenCalled()
+    expect(intercepted).toHaveBeenCalledWith(true)
   })
 
-  test('intents are tagged', function () {
-    const spy = jest.fn()
+  it('send with an action bubbles up to parent presenters', function() {
+    const test = jest.fn()
+    const intercepted = jest.fn()
 
-    const a = function a () {}
-    const b = function a () {}
+    const Child = withSend(function({ send }) {
+      return <button id="button" onClick={() => send(test, true)} />
+    })
 
-    class Test extends Presenter {
-      register() {
-        return { [a]: spy }
+    class Parent extends Presenter {
+      intercept() {
+        return {
+          [test]: (repo, val) => intercepted(val)
+        }
       }
-      view () {
-        return (
-          <button id="button" onClick={() => this.send(b, true)} />
-        )
+      view() {
+        return <Child />
       }
     }
 
-    render(<Test />).click()
+    mount(<Parent repo={new Microcosm()} />).find(Child).simulate('click')
+
+    expect(test).not.toHaveBeenCalled()
+    expect(intercepted).toHaveBeenCalledWith(true)
+  })
+
+  it('actions are tagged', function() {
+    const spy = jest.fn()
+
+    const a = function a() {}
+    const b = function a() {}
+
+    class TestView extends React.Component {
+      static contextTypes = {
+        send: () => {}
+      }
+      render() {
+        return <button id="button" onClick={() => this.context.send(b, true)} />
+      }
+    }
+
+    class Test extends Presenter {
+      intercept() {
+        return { [a]: spy }
+      }
+      view() {
+        return <TestView />
+      }
+    }
+
+    mount(<Test />).find(TestView).simulate('click')
 
     expect(spy).not.toHaveBeenCalled()
   })
 
+  it('send is available in setup', function() {
+    const test = jest.fn()
+
+    class Parent extends Presenter {
+      setup() {
+        this.send('test')
+      }
+      intercept() {
+        return { test }
+      }
+    }
+
+    mount(<Parent />)
+
+    expect(test).toHaveBeenCalled()
+  })
+
+  it('send can be called directly from the Presenter', function() {
+    const test = jest.fn()
+
+    class Parent extends Presenter {
+      intercept() {
+        return { test }
+      }
+    }
+
+    mount(<Parent />).instance().send('test', true)
+
+    expect(test).toHaveBeenCalled()
+  })
 })
 
-describe('forks', function () {
-
-  test('nested presenters fork in the correct order', function () {
+describe('forks', function() {
+  it('nested presenters fork in the correct order', function() {
     class Top extends Presenter {
       setup(repo) {
         repo.name = 'top'
@@ -676,7 +1187,7 @@ describe('forks', function () {
         repo.name = 'bottom'
       }
 
-      view () {
+      render() {
         let names = []
         let repo = this.repo
 
@@ -685,13 +1196,78 @@ describe('forks', function () {
           repo = repo.parent
         }
 
-        return <p>{names.join(', ')}</p>
+        return (
+          <p>
+            {names.join(', ')}
+          </p>
+        )
       }
     }
 
-    const el = render(<Top><Middle><Bottom /></Middle></Top>)
+    const text = mount(
+      <Top>
+        <Middle>
+          <Bottom />
+        </Middle>
+      </Top>
+    ).textContent
 
-    expect(el.textContent).toEqual('bottom, middle, top')
+    expect(text).toEqual('bottom, middle, top')
+  })
+})
+
+describe('::send', function() {
+  it('autobinds send', function() {
+    expect.assertions(2)
+
+    class Test extends Presenter {
+      prop = true
+
+      intercept() {
+        return {
+          test: () => {
+            expect(this).toBeInstanceOf(Test)
+            expect(this.prop).toBe(true)
+          }
+        }
+      }
+
+      view = function({ send }) {
+        return <button onClick={() => send('test')}>Click me</button>
+      }
+    }
+
+    mount(<Test />).find('button').simulate('click')
+  })
+})
+
+describe('::children', function() {
+  it('re-renders when it gets new children', function() {
+    let wrapper = mount(
+      <Presenter>
+        <span>1</span>
+      </Presenter>
+    )
+
+    wrapper.setProps({ children: <span>2</span> })
+
+    expect(wrapper.textContent).toEqual('2')
   })
 
+  it('does not re-render when children are the same', function() {
+    let children = <span>1</span>
+    let wrapper = mount(
+      <Presenter>
+        {children}
+      </Presenter>
+    )
+
+    let presenter = wrapper.instance()
+
+    jest.spyOn(presenter, 'render')
+
+    wrapper.setProps({ children })
+
+    expect(presenter.render).not.toHaveBeenCalled()
+  })
 })

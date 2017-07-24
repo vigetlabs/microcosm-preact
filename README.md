@@ -13,12 +13,13 @@ higher.
 ## Usage
 
 ```javascript
-import { Presenter, Form, withIntent } from 'microcosm-preact'
+import { Presenter, ActionForm, ActionButton, withSend } from 'microcosm-preact'
 
 // or
 import Presenter from 'microcosm-preact/presenter'
-import Form from 'microcosm-preact/form'
-import withIntent from 'microcosm-preact/with-intent'
+import ActionForm from 'microcosm-preact/action-form'
+import ActionButton from 'microcosm-preact/action-button'
+import withSend from 'microcosm-preact/with-send'
 ```
 
 ## Documentation

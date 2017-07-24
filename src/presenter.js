@@ -18,7 +18,7 @@ function passChildren() {
 }
 
 function renderMediator() {
-  return React.createElement(PresenterMediator, {
+  return h(PresenterMediator, {
     presenter: this,
     parentState: this.state,
     parentProps: this.props
@@ -38,7 +38,7 @@ class Presenter extends Component {
   constructor(props, context) {
     super()
 
-    if (this.render) {
+    if (this.constructor.prototype.hasOwnProperty('render')) {
       this.defaultRender = this.render
     } else {
       this.defaultRender = passChildren
@@ -164,14 +164,6 @@ class Presenter extends Component {
    */
   getModel(presenterProps, presenterState) {
     return {}
-  }
-
-  render() {
-    return h(PresenterMediator, {
-      presenter: this,
-      parentState: this.state,
-      parentProps: this.props
-    })
   }
 }
 

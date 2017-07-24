@@ -10,6 +10,7 @@
     "start": "webpack-dev-server",
     "build": "NODE_ENV=production webpack -p"
   },
+  "repository": "https://github.com/vigetlabs/microcosm-preact",
   "jest": {
     "setupFiles": [
       "./test/setup.js"

@@ -17,6 +17,14 @@ function passChildren() {
   return this.props.children[0]
 }
 
+function renderMediator() {
+  return React.createElement(PresenterMediator, {
+    presenter: this,
+    parentState: this.state,
+    parentProps: this.props
+  })
+}
+
 /* istanbul ignore next */
 const identity = () => {}
 
@@ -30,12 +38,17 @@ class Presenter extends Component {
   constructor(props, context) {
     super()
 
-    if (this.render !== Presenter.prototype.render) {
+    if (this.render) {
       this.defaultRender = this.render
-      this.render = Presenter.prototype.render
     } else {
       this.defaultRender = passChildren
     }
+
+    // We need to wrap the children of this presenter in a
+    // PresenterMediator component. This ensures that we can pass along
+    // context in browsers that do not support static inheritence (IE10)
+    // and allow overriding of lifecycle methods
+    this.render = renderMediator
 
     // Autobind send so that context is maintained when passing send to children
     this.send = this.send.bind(this)

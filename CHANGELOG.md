@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0
+
+- Update to conform to the Microcosm 12.x addon APIs.
+
 ## 0.4.0
 
 - Minor change to children rendering for default `view`. Preact always provides

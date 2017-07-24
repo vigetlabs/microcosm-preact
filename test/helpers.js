@@ -9,5 +9,5 @@ export function mount (...args) {
 }
 
 export function remount(component, el) {
-return mount(component, el, el.firstChild)
+  return mount(component, el, el.firstChild)
 }

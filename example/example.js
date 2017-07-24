@@ -38,7 +38,7 @@ const Pixel = withSend(function Pixel({ i, j, active, send }) {
   )
 })
 
-let size = 128
+let size = 64
 function Canvas() {
   const items = []
 
